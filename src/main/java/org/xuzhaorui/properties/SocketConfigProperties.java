@@ -29,6 +29,10 @@ public class SocketConfigProperties {
      */
     private int length = 4;
 
+    /**
+     * 是否打印序列化器内存地址
+     */
+    private boolean printSerializerMemoryAddress = false;
     public int getPort() {
         return port;
     }
@@ -67,5 +71,13 @@ public class SocketConfigProperties {
 
     public void setLength(int length) {
         this.length = length;
+    }
+
+    public boolean isPrintSerializerMemoryAddress() {
+        return printSerializerMemoryAddress;
+    }
+
+    public void setPrintSerializerMemoryAddress(boolean printSerializerMemoryAddress) {
+        this.printSerializerMemoryAddress = printSerializerMemoryAddress;
     }
 }

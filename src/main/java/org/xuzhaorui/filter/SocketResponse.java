@@ -2,6 +2,8 @@ package org.xuzhaorui.filter;
 
 
 
+import org.xuzhaorui.messageserialization.SocketMessageSerializer;
+
 import java.io.OutputStream;
 import java.net.Socket;
 
@@ -14,8 +16,18 @@ public class SocketResponse {
 
     private Object message;
 
+    /**
+     * 命中的反序列化器
+     */
+    private SocketMessageSerializer hitSerializer;
 
+    public SocketMessageSerializer getHitSerializer() {
+        return hitSerializer;
+    }
 
+    public void setHitSerializer(SocketMessageSerializer hitSerializer) {
+        this.hitSerializer = hitSerializer;
+    }
 
     public Object getCode() {
         return code;

@@ -10,6 +10,7 @@ import org.xuzhaorui.exception.soc.SocketNativeException;
 import org.xuzhaorui.exception.soc.SocketNativeHandler;
 import org.xuzhaorui.filter.SocketRequest;
 import org.xuzhaorui.filter.SocketResponse;
+import org.xuzhaorui.messageserialization.SocketMessageSerializer;
 import org.xuzhaorui.store.SocketMessageInfo;
 import org.xuzhaorui.store.SocketMessageInfoRegistry;
 import org.xuzhaorui.properties.SocketConfigProperties;
@@ -40,7 +41,7 @@ public class SocketExceptionHandler {
 
 
 
-    public void handleException(SocketRequest request, SocketResponse response, Exception exception) throws IOException {
+    public void handleException(SocketRequest request, SocketResponse response, Exception exception) throws Exception {
 
             Throwable targetException = exception.getCause();
             if (targetException instanceof Exception) {
@@ -65,7 +66,8 @@ public class SocketExceptionHandler {
             SocketMessageInfo socketMessageInfo = socketMessageInfoRegistry.getSocketMessageInfo(hitBeanClass);
             AnnotationUtils.modifyMarkAnnotationValue(messageBean, SocketCode.class,socketMessageInfo.getSocketCodePaths(),response.getCode());
             AnnotationUtils.modifyMarkAnnotationValue(messageBean, SocketMsg.class,socketMessageInfo.getSocketMsgPaths(),response.getMessage());
-            Object serialize = socketMessageInfo.getSocketMessageSerializer().serialize(messageBean);
+            SocketMessageSerializer hitSerializer = response.getHitSerializer();
+            Object serialize = hitSerializer.serialize(messageBean);
             readWriteMode.write(response.getOutputStream(), serialize,socketConfigProperties.getLength());
         }
 

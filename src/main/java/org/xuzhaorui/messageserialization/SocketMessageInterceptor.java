@@ -7,6 +7,7 @@ import org.xuzhaorui.filter.SocketResponse;
 import org.xuzhaorui.store.SocketMessageInfoRegistry;
 
 import javax.annotation.Resource;
+import java.io.Serializable;
 
 /**
  * 消息拦截器
@@ -33,7 +34,7 @@ public class SocketMessageInterceptor {
      * @throws RuntimeException 异常
      * @return 序列化数据
      */
-    public Object serialize(Object data) throws RuntimeException {
+    public <R extends Serializable> Object serialize(R data) throws RuntimeException {
         return SocketMessageIterator.iterateAndSerialize(socketMessageInfoRegistry.getSocketMessages(), data);
     }
 }

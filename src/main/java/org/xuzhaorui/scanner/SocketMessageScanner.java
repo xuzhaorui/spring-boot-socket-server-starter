@@ -19,6 +19,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import javax.annotation.PostConstruct;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 用于扫描SocketMessage的消息扫描器
@@ -47,7 +48,6 @@ public class SocketMessageScanner {
 
         // 扫描指定包中的类
         String scanSocketMessagePackage = socketConfigProperties.getScanSocketMessagePackage();
-        Assert.hasText(scanSocketMessagePackage, "scanSocketMessagePackage 不能为空");
         // 如果未配置扫描路径，设置为全局扫描
         // 全局扫描的性能：
         // 全局扫描可能会带来性能开销，特别是在大规模项目中。因此建议设置明确的扫描路径，避免不必要的组件被加载。
@@ -63,6 +63,7 @@ public class SocketMessageScanner {
             throw new IllegalArgumentException("未在路径 '" + scanSocketMessagePackage + "' 中找到任何标记@SocketMessage的类");
         }
 
+        List<SocketMessageSerializer> socketMessageSerializers = new ArrayList<>();
         for (BeanDefinition beanDefinition : beanDefinitions) {
             // 获取类对象
             Class<?> clazz = Class.forName(beanDefinition.getBeanClassName());
@@ -87,21 +88,58 @@ public class SocketMessageScanner {
                 List<String> socketMsgPaths = SocketUrlFinder.fieldLookingForMarkupAnnotationsCanBeEmbedded(clazz, SocketMsg.class);
                 messageInfo.setSocketMsgPaths(socketMsgPaths);
 
-                // 获取该类的自定义序列化器，并缓存到serializers
 
-                Class<? extends SocketMessageSerializer<?,?>> serializerClass = socketMessageAnnotation.serializer();
-                try {
-                    // 实例化用户自定义的序列化器
-                    SocketMessageSerializer<?,?> serializer = serializerClass.getDeclaredConstructor().newInstance();
-                    messageInfo.setSocketMessageSerializer(serializer);
-                } catch (Exception e) {
-                    throw new RuntimeException("Error instantiating serializer", e);
-                }
+                initSerializerClassArray(socketMessageAnnotation, socketMessageSerializers, messageInfo);
 
                 socketMessageInfoRegistry.addSocketMessage(clazz, messageInfo);
             }
         }
+        if (socketConfigProperties.isPrintSerializerMemoryAddress()){
+            ConcurrentHashMap<Class<?>, SocketMessageInfo> socketMessages = socketMessageInfoRegistry.getSocketMessages();
+
+            socketMessages.values().stream()
+                    .flatMap(socketMessageInfo -> socketMessageInfo.getSocketMessageSerializerList().stream())
+                    .forEach(socketMessageSerializer -> log.info("序列化器内存地址：{}", socketMessageSerializer.hashCode()));
+        }
+
     }
+
+    private static void initSerializerClassArray(SocketMessage socketMessageAnnotation,
+                                                 List<SocketMessageSerializer> socketMessageSerializers,
+                                                 SocketMessageInfo messageInfo) {
+        Class<? extends SocketMessageSerializer>[] serializerClassArray = socketMessageAnnotation.serializer();
+
+        try {
+            for (Class<? extends SocketMessageSerializer> serializerClass : serializerClassArray) {
+                // 查找缓存中是否已有该类的序列化器实例
+                Optional<SocketMessageSerializer> cachedSerializer = socketMessageSerializers.stream()
+                        .filter(serializer -> serializer.getClass().equals(serializerClass))
+                        .findFirst();
+
+                SocketMessageSerializer serializer;
+
+                // 如果缓存中已存在，直接使用缓存的实例
+                if (cachedSerializer.isPresent()) {
+                    serializer = cachedSerializer.get();
+                } else {
+                    // 如果不存在缓存，创建新的实例并缓存
+                    serializer = serializerClass.getDeclaredConstructor().newInstance();
+                    socketMessageSerializers.add(serializer);
+                }
+
+                // 如果 messageInfo 中未设置序列化器列表，初始化
+                if (messageInfo.getSocketMessageSerializerList() == null) {
+                    messageInfo.setSocketMessageSerializerList(new ArrayList<>());
+                }
+
+                // 将序列化器加入 messageInfo
+                messageInfo.getSocketMessageSerializerList().add(serializer);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error instantiating serializer", e);
+        }
+    }
+
 
 
 }

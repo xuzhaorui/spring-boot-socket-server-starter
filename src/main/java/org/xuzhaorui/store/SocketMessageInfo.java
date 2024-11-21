@@ -1,6 +1,9 @@
 package org.xuzhaorui.store;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xuzhaorui.filter.SocketResponse;
 import org.xuzhaorui.messageserialization.SocketMessageSerializer;
 
 import java.util.List;
@@ -11,7 +14,8 @@ import java.util.List;
  *
  */
 
-public class SocketMessageInfo {
+public class SocketMessageInfo  {
+    private static final Logger log = LoggerFactory.getLogger(SocketMessageInfo.class);
     /**
      * 解析优先级
      */
@@ -40,7 +44,7 @@ public class SocketMessageInfo {
      * @param priority
      * @param serializeType
      */
-    private SocketMessageSerializer<?, ?> socketMessageSerializer;
+    private List<SocketMessageSerializer> socketMessageSerializerList;
 
 
     public SocketMessageInfo(int priority) {
@@ -77,18 +81,49 @@ public class SocketMessageInfo {
         this.socketMsgPaths = socketMsgPaths;
     }
 
-
-
-    /**
-     * @param <T> 序列化后的数据类型
-     * @param <R> 反序列化后的对象类型
-     */
-    public <T, R> SocketMessageSerializer<T, R> getSocketMessageSerializer() {
-        // 强制类型转换成合适的序列化器
-        return (SocketMessageSerializer<T, R>) socketMessageSerializer;
+    public List<SocketMessageSerializer> getSocketMessageSerializerList() {
+        return socketMessageSerializerList;
     }
 
-    public void setSocketMessageSerializer(SocketMessageSerializer<?, ?> socketMessageSerializer) {
-        this.socketMessageSerializer = socketMessageSerializer;
+    public void setSocketMessageSerializerList(List<SocketMessageSerializer> socketMessageSerializerList) {
+        this.socketMessageSerializerList = socketMessageSerializerList;
+    }
+
+    public Object deserialize(Object message, Class<?> clazz, SocketResponse response) throws Exception {
+        for (SocketMessageSerializer socketMessageSerializer : socketMessageSerializerList) {
+            try {
+                Object result = socketMessageSerializer.deserialize(message, clazz);
+                if (result != null) {
+                    response.setHitSerializer(socketMessageSerializer);
+                    return result; // 提前返回，减少不必要的判断
+                }
+            } catch (Exception e) {
+                // 捕获反序列化失败时的异常，记录日志并继续尝试下一个序列化器
+                log.warn("使用 {} 序列化器，反序列化 {} 失败，错误: {}，尝试下一个序列化器",
+                        socketMessageSerializer.getClass().getName(), clazz.getName(), e.getMessage());
+            }
+        }
+
+        // 如果所有序列化器都失败，记录错误日志并抛出异常
+        log.error("对象 {} 的所有序列化器均反序列化失败，序列化器详见 SocketMessage 中 serializer", clazz.getName());
+        throw new Exception("反序列化失败: 无法找到适合的序列化器处理 " + clazz.getName());
+    }
+
+
+    public Object serialize(Object data) throws Exception {
+        for (SocketMessageSerializer socketMessageSerializer : socketMessageSerializerList) {
+            try {
+                Object serialize =   socketMessageSerializer.serialize(data);
+                if (serialize != null) {
+                    return serialize;
+                }
+            } catch (Exception e) {
+                log.warn("使用{}序列化器，序列化{}失败, 调用下一个序列化器",socketMessageSerializer.getClass().getName(),data.getClass().getName());
+            }
+        }
+        log.error("对象{}的所有序列化器，序列化失败，序列化器详见SocketMessage中serializer",data.getClass().getName());
+        throw new Exception("序列化失败: 无法找到适合的序列化器处理 " +data.getClass().getName());
+
+
     }
 }

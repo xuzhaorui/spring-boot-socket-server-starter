@@ -12,6 +12,7 @@ import org.xuzhaorui.filter.*;
 import org.xuzhaorui.messageserialization.SocketMessageSerializer;
 import org.xuzhaorui.socketcontext.SocketAuthentication;
 import org.xuzhaorui.socketcontext.SocketContextHolder;
+import org.xuzhaorui.store.SocketMessageInfo;
 import org.xuzhaorui.url.AllowedUrlManager;
 import org.xuzhaorui.store.FilterChainRegistry;
 import org.xuzhaorui.store.SocketMessageInfoRegistry;
@@ -206,11 +207,11 @@ public class SocketServer {
                         preFiltrationProcessor.process(request, response);
                         // 获取URL对应的过滤链
                         String socketUrl = request.getRequestUrl();
+                        // 获取反序列化的命中对象的SocketMessageInfo
                         // 判断是否放行
                         if (allowedUrlManager.isUrlAllowed(socketUrl)) {
                             Object returnValue = socketMappingHandler.handleRequest( request, response);
-                            SocketMessageSerializer<Object,Object> socketMessageSerializer = socketMessageInfoRegistry.getSocketMessageInfo(request.getMessageBean().getClass()).getSocketMessageSerializer();
-                            Object serialize = socketMessageSerializer.serialize(returnValue);
+                            Object serialize = response.getHitSerializer().serialize(returnValue);
                             readWriteMode.write(outputStream,serialize,length);
                         } else {
                             List<SocketFilter> filters = filterChainRegistry.getFilters(socketUrl);
@@ -221,8 +222,7 @@ public class SocketServer {
                             SocketAuthentication socketAuthentication = SocketContextHolder.getSocketContext().getSocketAuthentication();
                             if (Objects.nonNull(socketAuthentication) && socketAuthentication.isAuthenticated()) {
                                 Object returnValue = socketMappingHandler.handleRequest( request, response);
-                                SocketMessageSerializer<Object,Object> socketMessageSerializer = socketMessageInfoRegistry.getSocketMessageInfo(request.getMessageBean().getClass()).getSocketMessageSerializer();
-                                Object serialize = socketMessageSerializer.serialize(returnValue);
+                                Object serialize = response.getHitSerializer().serialize(returnValue);
                                 readWriteMode.write(outputStream,serialize,length);
                             } else {
                                 throw  new SocketAuthenticationFailException("未认证");
@@ -238,6 +238,8 @@ public class SocketServer {
                                 exceptionHandler.handleException(request, response, ex);
                             } catch (IOException e) {
                                 log.error("处理Socket请求发生异常的消息响应时写回异常: {}", e.getMessage());
+                            } catch (Exception e) {
+                                log.error("序列化异常: {}", e.getMessage());
                             }
                         }
 

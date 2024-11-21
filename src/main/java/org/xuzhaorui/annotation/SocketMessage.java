@@ -18,5 +18,5 @@ public @interface SocketMessage {
     int priority() default 1;
 
     // 用户可以指定自定义的序列化类
-    Class<? extends SocketMessageSerializer<?,?>> serializer();
+    Class<? extends SocketMessageSerializer>[] serializer();
 }
