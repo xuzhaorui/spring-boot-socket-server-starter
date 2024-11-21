@@ -209,16 +209,9 @@ public class JsonUtil {
 <pre>
 <code>
 public  class KryoSerializer {
-    private static volatile KryoSerializer me;
+    private static KryoSerializer me = new KryoSerializer();
     private  KryoSerializer(){}
     public static KryoSerializer getKryoSerializer() {
-        if (me == null){
-            synchronized (KryoSerializer.class){
-                if (me == null){
-                    me = new KryoSerializer();
-                }
-            }
-        }
         return me;
     }
     /**
