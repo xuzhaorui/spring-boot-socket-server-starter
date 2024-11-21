@@ -54,7 +54,7 @@ socket:
 
 <p>Define a message object with <code>@SocketMessage</code> and specify the serializer (can be multiple):</p>
 
-<p><code>java
+<p><code>
 @Data
 @SocketMessage(serializer = {KryoSocketSerializer.class, JsonSerialization.class})
 public class ResponseVO implements Serializable {
