@@ -34,7 +34,6 @@
         <url>https://github.com/xuzhaorui/spring-boot-socket-server-starter</url>
     </scm>
 
-<!--    <packaging>jar</packaging>  &lt;!&ndash; 指定生成 JAR 包 &ndash;&gt;-->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>

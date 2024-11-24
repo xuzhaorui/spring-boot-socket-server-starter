@@ -62,9 +62,7 @@ public class SocketClientProcessor {
             Object clientMessage;
             while ((clientMessage = readWriteMode.read(inputStream, length)) != null) {
                 // 无需加锁，因为 SocketRequest 和 SocketResponse 是每个线程自带的（线程局部）
-                InetAddress inetAddress = socket.getInetAddress();
-                int port = socket.getPort();
-                SocketRequest request = new SocketRequest(clientMessage,inetAddress,port);
+                SocketRequest request = new SocketRequest(socket,clientMessage);
                 SocketResponse response = new SocketResponse(outputStream);
                 try {
                     preFiltrationProcessor.process(request, response);

@@ -26,7 +26,9 @@ public class PathMatcher {
     }
 
     /**
-     * 检查是否某个路径模式完全匹配
+     *  检查是否某个路径模式完全匹配
+     * @param pattern 模式
+     * @param url url
      * @return 是否完全匹配
      */
     public static boolean fullMatch(String pattern, String url) {

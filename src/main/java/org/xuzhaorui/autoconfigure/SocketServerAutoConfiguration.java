@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import org.xuzhaorui.exception.SocketExceptionHandler;
+import org.xuzhaorui.keygeneration.DefKeyGenerationPolicy;
+import org.xuzhaorui.keygeneration.KeyGenerationPolicy;
 import org.xuzhaorui.messageserialization.SocketMessageInterceptor;
 import org.xuzhaorui.prefiltration.PreFiltrationProcessor;
 import org.xuzhaorui.properties.SocketConfigProperties;
@@ -137,11 +139,23 @@ public class SocketServerAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(AllowedUrlManager.class)
-    public DefAllowedUrlManager defAllowedUrlManager() {
-        DefAllowedUrlManager defAllowedUrlManager = new DefAllowedUrlManager();
+    public AllowedUrlManager defAllowedUrlManager() {
+        AllowedUrlManager defAllowedUrlManager = new DefAllowedUrlManager();
         defAllowedUrlManager.addAllowedUrl("/login");
         return defAllowedUrlManager;
     }
+
+    /**
+     * 客户端长链接的缓存key生成策略
+     * @return KeyGenerationPolicy
+     */
+    @Bean
+    @ConditionalOnMissingBean(KeyGenerationPolicy.class)
+    public KeyGenerationPolicy defKeyGenerationPolicy() {
+        return new DefKeyGenerationPolicy();
+    }
+
+
 
 
 

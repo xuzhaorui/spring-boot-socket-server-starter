@@ -2,8 +2,8 @@ package org.xuzhaorui.filter;
 
 import org.xuzhaorui.annotation.FilterChain;
 import org.xuzhaorui.exception.auth.SocketAuthenticationFailException;
+import org.xuzhaorui.keygeneration.KeyGenerationPolicy;
 import org.xuzhaorui.server.ClientConnectionInfo;
-import org.xuzhaorui.server.SocketMetBean;
 import org.xuzhaorui.socketcontext.*;
 import org.xuzhaorui.store.SocketAuthenticationSuccessfulStorage;
 
@@ -16,18 +16,21 @@ import java.util.Objects;
 @FilterChain(order = 1)
 public class AuthenticationFilter implements SocketFilter {
     private final SocketAuthenticationSuccessfulStorage socketAuthenticationSuccessfulStorage;
-    public AuthenticationFilter(SocketAuthenticationSuccessfulStorage socketAuthenticationSuccessfulStorage) {
+    private final KeyGenerationPolicy keyGenerationPolicy;
+
+    public AuthenticationFilter(SocketAuthenticationSuccessfulStorage socketAuthenticationSuccessfulStorage, KeyGenerationPolicy keyGenerationPolicy) {
         this.socketAuthenticationSuccessfulStorage = socketAuthenticationSuccessfulStorage;
+        this.keyGenerationPolicy = keyGenerationPolicy;
     }
+
     @Override
     public void doFilter(SocketRequest request, SocketResponse response, SocketFilterChain chain)
         throws Exception {
-        // 获取客户端socket
-        Socket clientSocket = request.getClientSocket();
-        // 获取客户端ip和端口
-        String  ipAndPort = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+
+
+        String  key = keyGenerationPolicy.generationKey(request);
         // 由于认证接口被放行所以，根据ip和端口获取已认证的socketMetBean
-        ClientConnectionInfo authenticatedSocketMetBean = socketAuthenticationSuccessfulStorage.getAuthenticatedSocketMetBean(ipAndPort);
+        ClientConnectionInfo authenticatedSocketMetBean = socketAuthenticationSuccessfulStorage.getAuthenticatedClientConnectionInfo(key);
         // 如果已认证的socketMetBean不为空且当前socket上下文中没有socket认证信息
         SocketAuthentication socketAuthentication = SocketContextHolder.getSocketContext().getSocketAuthentication();
         if (Objects.nonNull(authenticatedSocketMetBean) && Objects.isNull(socketAuthentication)) {

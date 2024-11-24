@@ -4,6 +4,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.xuzhaorui.filter.AuthenticationFilter;
+import org.xuzhaorui.keygeneration.KeyGenerationPolicy;
 import org.xuzhaorui.store.FilterChainRegistry;
 import org.xuzhaorui.scanner.SocketFilterScanner;
 import org.xuzhaorui.store.SocketAuthenticationSuccessfulStorage;
@@ -28,8 +29,8 @@ public class SocketFilterConfiguration {
      * @return AuthenticationFilter
      */
     @Bean
-    public AuthenticationFilter authenticationFilter(SocketAuthenticationSuccessfulStorage socketAuthenticationSuccessfulStorage) {
-        return new AuthenticationFilter(socketAuthenticationSuccessfulStorage);
+    public AuthenticationFilter authenticationFilter(SocketAuthenticationSuccessfulStorage socketAuthenticationSuccessfulStorage, KeyGenerationPolicy keyGenerationPolicy) {
+        return new AuthenticationFilter(socketAuthenticationSuccessfulStorage,keyGenerationPolicy);
     }
 
     /**
