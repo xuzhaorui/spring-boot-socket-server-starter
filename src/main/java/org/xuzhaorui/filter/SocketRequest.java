@@ -1,6 +1,7 @@
 package org.xuzhaorui.filter;
 
 
+import java.net.InetAddress;
 import java.net.Socket;
 
 
@@ -25,10 +26,25 @@ public class SocketRequest {
      */
     private  Object clientMessage;
 
-
-    public SocketRequest(Socket clientSocket, Object clientMessage) {
-        this.clientSocket = clientSocket;
+    private  InetAddress clientAddress;
+    private  int clientPort;
+    public SocketRequest( Object clientMessage, InetAddress clientAddress, int clientPort) {
         this.clientMessage = clientMessage;
+        this.clientAddress = clientAddress;
+        this.clientPort = clientPort;
+    }
+
+    public SocketRequest( Socket socket, Object clientMessage ) {
+        this.clientSocket = socket;
+        this.clientMessage = clientMessage;
+    }
+
+    public InetAddress getClientAddress() {
+        return clientAddress;
+    }
+
+    public int getClientPort() {
+        return clientPort;
     }
 
     public String getRequestUrl() {

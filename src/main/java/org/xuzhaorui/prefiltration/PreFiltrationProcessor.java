@@ -34,7 +34,6 @@ public class PreFiltrationProcessor {
 
     public void process(SocketRequest request, SocketResponse response) throws Exception {
         // 反序列化并设置消息
-        // 消息反序列化（不加锁）
         socketMessageInterceptor.deserialize(request,response);
 
         // 消息验证

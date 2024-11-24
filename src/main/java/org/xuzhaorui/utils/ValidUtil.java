@@ -3,7 +3,6 @@ package org.xuzhaorui.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xuzhaorui.exception.pre.SocketValidationException;
-import org.xuzhaorui.messageserialization.SocketMessageInterceptor;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;

@@ -34,7 +34,7 @@ public class SocketMessageInterceptor {
      * @throws RuntimeException 异常
      * @return 序列化数据
      */
-    public <R extends Serializable> Object serialize(R data) throws RuntimeException {
+    public Object serialize(Object data) throws RuntimeException {
         return SocketMessageIterator.iterateAndSerialize(socketMessageInfoRegistry.getSocketMessages(), data);
     }
 }

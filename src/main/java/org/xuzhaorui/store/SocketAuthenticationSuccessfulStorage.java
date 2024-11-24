@@ -2,6 +2,7 @@ package org.xuzhaorui.store;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xuzhaorui.server.ClientConnectionInfo;
 import org.xuzhaorui.server.SocketMetBean;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +37,8 @@ public class SocketAuthenticationSuccessfulStorage {
 
     private static final Logger log = LoggerFactory.getLogger(SocketAuthenticationSuccessfulStorage.class);
     // 线程安全的 ConcurrentMap 用于存储认证成功的 socket 连接
-    private final ConcurrentMap<String, SocketMetBean> authenticatedSocketMetBeans = new ConcurrentHashMap<>();
+//    private final ConcurrentMap<String, SocketMetBean> authenticatedSocketMetBeans = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ClientConnectionInfo> authenticatedSocketMetBeans = new ConcurrentHashMap<>();
 
     // 用于存储每个分区的锁（每个分区有多个锁）
     private final ConcurrentMap<Integer, ConcurrentMap<String, ReentrantLock>> partitionLocks = new ConcurrentHashMap<>();
@@ -68,14 +70,15 @@ public class SocketAuthenticationSuccessfulStorage {
      * @param socketMetBean 存储的数据
      * @return 是否存储成功
      */
-    public boolean storeAuthenticatedSocketMetBean(String clientId, SocketMetBean socketMetBean) {
+//    public boolean storeAuthenticatedSocketMetBean(String clientId, SocketMetBean socketMetBean) {
+    public boolean storeAuthenticatedSocketMetBean(String clientId, ClientConnectionInfo connectionInfo) {
         ReentrantLock lock = getLockForPartition(clientId);
         try {
             // 尝试在指定的超时时间内获取锁
             if (lock.tryLock(LOCK_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 try {
                     // 获取写锁，确保数据一致性
-                    authenticatedSocketMetBeans.put(clientId, socketMetBean);
+                    authenticatedSocketMetBeans.put(clientId, connectionInfo);
                     return true;  // 成功存储
                 } finally {
                     lock.unlock();  // 解锁
@@ -97,7 +100,8 @@ public class SocketAuthenticationSuccessfulStorage {
      * @param clientId 客户端ID
      * @return Socket 连接
      */
-    public SocketMetBean getAuthenticatedSocketMetBean(String clientId) {
+//    public SocketMetBean getAuthenticatedSocketMetBean(String clientId) {
+    public ClientConnectionInfo  getAuthenticatedSocketMetBean(String clientId) {
         ReentrantLock lock = getLockForPartition(clientId);
         try {
             // 尝试在指定的超时时间内获取锁

@@ -17,8 +17,8 @@ import org.xuzhaorui.properties.SocketConfigProperties;
 import org.xuzhaorui.readingmode.ReadWriteMode;
 import org.xuzhaorui.readingmode.ReadingModeFactory;
 import org.xuzhaorui.scanner.SocketMappingHandler;
-import org.xuzhaorui.store.SocketAuthenticationSuccessfulStorage;
 import org.xuzhaorui.server.SocketServer;
+import org.xuzhaorui.store.SocketAuthenticationSuccessfulStorage;
 import org.xuzhaorui.store.FilterChainRegistry;
 import org.xuzhaorui.store.SocketMessageInfoRegistry;
 import org.xuzhaorui.store.SocketMethodMappingRegistry;
@@ -54,7 +54,6 @@ public class SocketServerAutoConfiguration {
      * @param preFiltrationProcessor 预处理
      * @param readWriteMode 消息读写模式
      * @param filterChainRegistry 过滤器链
-     * @param socketMessageInfoRegistry 消息信息
      * @return SocketServer
      */
     @Bean
@@ -66,13 +65,13 @@ public class SocketServerAutoConfiguration {
                                      SocketExceptionHandler exceptionHandler,
                                 PreFiltrationProcessor preFiltrationProcessor,
                                 ReadWriteMode readWriteMode,
-                                FilterChainRegistry filterChainRegistry,
-            SocketMessageInfoRegistry socketMessageInfoRegistry
+                                FilterChainRegistry filterChainRegistry
+
 
     )
     {
       return new SocketServer(
-              socketConfigProperties,socketMappingHandler,allowedUrlManager,exceptionHandler,filterChainRegistry, readWriteMode,preFiltrationProcessor,socketThreadPool,socketMessageInfoRegistry
+              socketConfigProperties,socketMappingHandler,allowedUrlManager,exceptionHandler,filterChainRegistry, readWriteMode,preFiltrationProcessor,socketThreadPool
       );
     }
 

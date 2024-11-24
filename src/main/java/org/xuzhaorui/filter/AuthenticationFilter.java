@@ -2,6 +2,7 @@ package org.xuzhaorui.filter;
 
 import org.xuzhaorui.annotation.FilterChain;
 import org.xuzhaorui.exception.auth.SocketAuthenticationFailException;
+import org.xuzhaorui.server.ClientConnectionInfo;
 import org.xuzhaorui.server.SocketMetBean;
 import org.xuzhaorui.socketcontext.*;
 import org.xuzhaorui.store.SocketAuthenticationSuccessfulStorage;
@@ -26,7 +27,7 @@ public class AuthenticationFilter implements SocketFilter {
         // 获取客户端ip和端口
         String  ipAndPort = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
         // 由于认证接口被放行所以，根据ip和端口获取已认证的socketMetBean
-        SocketMetBean authenticatedSocketMetBean = socketAuthenticationSuccessfulStorage.getAuthenticatedSocketMetBean(ipAndPort);
+        ClientConnectionInfo authenticatedSocketMetBean = socketAuthenticationSuccessfulStorage.getAuthenticatedSocketMetBean(ipAndPort);
         // 如果已认证的socketMetBean不为空且当前socket上下文中没有socket认证信息
         SocketAuthentication socketAuthentication = SocketContextHolder.getSocketContext().getSocketAuthentication();
         if (Objects.nonNull(authenticatedSocketMetBean) && Objects.isNull(socketAuthentication)) {

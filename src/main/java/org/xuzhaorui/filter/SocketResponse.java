@@ -8,7 +8,6 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 public class SocketResponse {
-    private final Socket clientSocket;
     private final OutputStream outputStream;
     private  String requestUrl;
 
@@ -48,15 +47,12 @@ public class SocketResponse {
 
 
 
-    public SocketResponse(Socket clientSocket, OutputStream outputStream) {
-        this.clientSocket = clientSocket;
+    public SocketResponse(OutputStream outputStream) {
         this.outputStream = outputStream;
 
     }
 
-    public Socket getClientSocket() {
-        return clientSocket;
-    }
+
 
     public OutputStream getOutputStream() {
         return outputStream;

@@ -53,8 +53,6 @@ public class SocketMappingHandler {
             return resolveSocketRequestData(socketRequest, parameter);
         } else if (parameter.isAnnotationPresent(SocketContextKey.class)) {
             return resolveSocketContextKey();
-        } else if (parameter.isAnnotationPresent(SocketContextSocket.class)) {
-            return socketRequest.getClientSocket();
         } else if (parameter.getType().isInstance(socketRequest)) {
             return socketRequest;
         } else if (parameter.getType().isInstance(socketResponse)) {
