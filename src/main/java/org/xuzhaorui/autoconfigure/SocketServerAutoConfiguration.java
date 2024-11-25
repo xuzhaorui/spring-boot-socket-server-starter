@@ -19,6 +19,7 @@ import org.xuzhaorui.properties.SocketConfigProperties;
 import org.xuzhaorui.readingmode.ReadWriteMode;
 import org.xuzhaorui.readingmode.ReadingModeFactory;
 import org.xuzhaorui.scanner.SocketMappingHandler;
+import org.xuzhaorui.server.ClientAsServerResponseHandler;
 import org.xuzhaorui.server.SocketServer;
 import org.xuzhaorui.store.SocketAuthenticationSuccessfulStorage;
 import org.xuzhaorui.store.FilterChainRegistry;
@@ -96,8 +97,12 @@ public class SocketServerAutoConfiguration {
      * @return PreFiltrationProcessor
      */
     @Bean
-    public PreFiltrationProcessor preFiltrationProcessor(SocketMessageInterceptor socketMessageInterceptor, ValidUtil validUtil, SocketMethodMappingRegistry socketMethodMappingRegistry, SocketMessageInfoRegistry socketMessageInfoRegistry) {
-        return new PreFiltrationProcessor(socketMessageInterceptor,validUtil,socketMethodMappingRegistry,socketMessageInfoRegistry);
+    public PreFiltrationProcessor preFiltrationProcessor(SocketMessageInterceptor socketMessageInterceptor, ValidUtil validUtil,
+                                                         SocketMethodMappingRegistry socketMethodMappingRegistry,
+                                                         SocketMessageInfoRegistry socketMessageInfoRegistry,
+                                                         ClientAsServerResponseHandler clientAsServerResponseHandler
+                                                         ) {
+        return new PreFiltrationProcessor(socketMessageInterceptor,validUtil,socketMethodMappingRegistry,socketMessageInfoRegistry,clientAsServerResponseHandler);
     }
 
     /**
@@ -156,7 +161,14 @@ public class SocketServerAutoConfiguration {
     }
 
 
-
+    /**
+     * 客户端作为服务器响应处理程序 生产者-消费者模式
+     *  @return ClientAsServerResponseHandler
+     */
+    @Bean
+    public ClientAsServerResponseHandler clientAsServerResponseHandler(SocketMessageInfoRegistry socketMessageInfoRegistry){
+        return new ClientAsServerResponseHandler(socketMessageInfoRegistry);
+    }
 
 
     /**

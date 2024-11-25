@@ -5,10 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.xuzhaorui.annotation.SocketCode;
-import org.xuzhaorui.annotation.SocketMessage;
-import org.xuzhaorui.annotation.SocketMsg;
-import org.xuzhaorui.annotation.SocketUrl;
+import org.xuzhaorui.annotation.*;
 import org.xuzhaorui.messageserialization.SocketMessageSerializer;
 import org.xuzhaorui.store.SocketMessageInfo;
 import org.xuzhaorui.store.SocketMessageInfoRegistry;
@@ -87,6 +84,10 @@ public class SocketMessageScanner {
                 // 查找 @SocketMsg 注解字段与层级关系
                 List<String> socketMsgPaths = SocketUrlFinder.fieldLookingForMarkupAnnotationsCanBeEmbedded(clazz, SocketMsg.class);
                 messageInfo.setSocketMsgPaths(socketMsgPaths);
+
+                // 查找 @ClientAsServer注解字段与层级关系
+                List<String> clientAsServerPaths = SocketUrlFinder.fieldLookingForMarkupAnnotationsCanBeEmbedded(clazz, ClientAsServer.class);
+                messageInfo.setClientAsServerPaths(clientAsServerPaths);
 
 
                 initSerializerClassArray(socketMessageAnnotation, socketMessageSerializers, messageInfo);

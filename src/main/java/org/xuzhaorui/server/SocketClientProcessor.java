@@ -2,6 +2,7 @@ package org.xuzhaorui.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xuzhaorui.exception.SocketClientAsServerException;
 import org.xuzhaorui.exception.SocketExceptionHandler;
 import org.xuzhaorui.exception.auth.SocketAuthenticationFailException;
 import org.xuzhaorui.filter.SocketRequest;
@@ -17,7 +18,6 @@ import org.xuzhaorui.url.AllowedUrlManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.util.List;
 import org.xuzhaorui.filter.*;
@@ -67,8 +67,14 @@ public class SocketClientProcessor {
                 try {
                     preFiltrationProcessor.process(request, response);
                     handleRequest(request, response, outputStream);
-                } catch (Exception ex) {
+                    // 在执行完 write 后，标记为已写入，并更新计数
+                    response.markWritten();
+                }catch (SocketClientAsServerException ignored) {
+                   // 客户端作为服务端响应
+                    log.info(ignored.getMessage());
+                }catch (Exception ex) {
                     handleException(request, response, ex);
+                    response.markWritten();
                 } finally {
                     SocketContextHolder.clearSocketContext(); // 清理上下文，防止线程池中线程复用时污染数据
                 }

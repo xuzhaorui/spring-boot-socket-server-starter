@@ -38,6 +38,10 @@ public class SocketMessageInfo  {
      */
     private List<String> socketMsgPaths;
 
+    /**
+     *ClientAsServer所在Bean结构
+     */
+    private List<String> clientAsServerPaths;
 
     /**
      *
@@ -87,6 +91,15 @@ public class SocketMessageInfo  {
 
     public void setSocketMessageSerializerList(List<SocketMessageSerializer> socketMessageSerializerList) {
         this.socketMessageSerializerList = socketMessageSerializerList;
+    }
+
+
+    public List<String> getClientAsServerPaths() {
+        return clientAsServerPaths;
+    }
+
+    public void setClientAsServerPaths(List<String> clientAsServerPaths) {
+        this.clientAsServerPaths = clientAsServerPaths;
     }
 
     public Object deserialize(Object message, Class<?> clazz, SocketResponse response) throws Exception {
