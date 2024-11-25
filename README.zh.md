@@ -73,14 +73,13 @@ public class ResponseVO implements Serializable {
 
 <h2>4. 标记 URL、ClientAsServer 和状态代码</h2>
 
-<p>将 URL 标记为 <code>@SocketUrl</code> 在 <code>HeaderVO</code> class:</p>
+<p>将 URL 标记为 <code>@SocketUrl</code> 与 是否是客户端主动向服务端发送消息标记为 <code>@ClientAsServer</code> 在 <code>HeaderVO</code> class:</p>
 
 <p><code>java
 <pre>
 <code>
 @Data
 public class HeaderVO {
-    // 是否是客户端主动向服务端发送消息
     @ClientAsServer
     private boolean clientAsServer;
     @NotNull @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
