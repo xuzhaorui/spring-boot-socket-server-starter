@@ -266,7 +266,24 @@ public class KryoSocketSerializer implements SocketMessageSerializer{
 </code>
 </p>
 
-<h2>6. 定义 Socket 控制器</h2>
+<h2>7、定义 认证成功后的客户端 的存储key生成</h2>
+<p><code>java
+<pre>
+<code>
+@Slf4j
+@Component
+public class CustomKeyGenerationPolicy implements KeyGenerationPolicy {
+    @Override
+    public String generationKey(SocketRequest request) throws Exception {
+    return "test";
+    }
+}
+</code>
+</pre>
+</code>
+</p>
+
+<h2>7. 定义 Socket 控制器</h2>
 
 <p>定义一个简单的控制器，其中包含 <code>@SocketMapping</code> method:</p>
 
@@ -359,7 +376,7 @@ public class SocketControllerTest {
 </p>
 
 
-<h2>7. Socket 客户端示例</h2>
+<h2>8. Socket 客户端示例</h2>
 
 <p>下面是一个简单的套接字客户端:</p>
 
