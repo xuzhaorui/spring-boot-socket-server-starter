@@ -3,13 +3,13 @@
 
 <h2>1. 添加依赖项</h2>
 
-<p>要使用 Starter，请在你的 <code>pom.xml</code>:</p>
+<p>要使用 Starter，请添加 <code>pom.xml</code>:</p>
 
 <p><code>xml
 &lt;dependency&gt;
     &lt;groupId&gt;io.github.xuzhaorui&lt;/groupId&gt;
     &lt;artifactId&gt;spring-boot-socket-server-starter&lt;/artifactId&gt;
-    &lt;version&gt;0.0.6&lt;/version&gt;
+    &lt;version&gt;0.0.7&lt;/version&gt;
 &lt;/dependency&gt;
 </code></p>
 
@@ -71,7 +71,7 @@ public class ResponseVO implements Serializable {
 </code>
 </p>
 
-<h2>4. 标记 URL 和状态代码</h2>
+<h2>4. 标记 URL、ClientAsServer 和状态代码</h2>
 
 <p>将 URL 标记为 <code>@SocketUrl</code> 在 <code>HeaderVO</code> class:</p>
 
@@ -80,6 +80,9 @@ public class ResponseVO implements Serializable {
 <code>
 @Data
 public class HeaderVO {
+    // 是否是客户端主动向服务端发送消息
+    @ClientAsServer
+    private boolean clientAsServer;
     @NotNull @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date date;
     @NotBlank
@@ -208,11 +211,14 @@ public class JsonUtil {
 <p><code>java
 <pre>
 <code>
+@Slf4j
 public  class KryoSerializer {
-    private static KryoSerializer me = new KryoSerializer();
-    private  KryoSerializer(){}
+    // 静态内部类方式，JVM 会确保类的加载线程安全
+    private static class Holder {
+        private static final KryoSerializer INSTANCE = new KryoSerializer();
+    }
     public static KryoSerializer getKryoSerializer() {
-        return me;
+        return Holder.INSTANCE;
     }
     /**
      * 因为 Kryo 不是线程安全的。因此，使用 ThreadLocal 来存储 Kryo 对象
@@ -268,26 +274,84 @@ public class KryoSocketSerializer implements SocketMessageSerializer{
 <p><code>java
 <pre>
 <code>
-@SocketController
+@Slf4j
 @RequiredArgsConstructor
+@SocketController
 public class SocketControllerTest {
 
     private final SocketAuthenticationSuccessfulStorage socketAuthenticationSuccessfulStorage;
-    
+    private final ReadWriteMode readWriteMode;
+    private final ClientAsServerResponseHandler clientAsServerResponseHandler;
+
+    private final byte[] demo = getDemo();
+    public static byte[] getDemo() {
+        ResponseVO responseVO = new ResponseVO();
+        responseVO.setBody("123");
+        HeaderVO headerVO = new HeaderVO();
+        ResultVO resultVO = new ResultVO();
+        headerVO.setDate(new Date()).setCommandId("/login").setEqpId("123456").setClientAsServer(false);
+        resultVO.setCode(200).setMessageCh("成功");
+        responseVO.setHeader(headerVO);
+        responseVO.setResult(resultVO);
+
+        // 确保 KryoSerializer 初始化成功
+        KryoSerializer kryoSerializer = KryoSerializer.getKryoSerializer();
+        if (kryoSerializer == null) {
+            throw new NullPointerException("KryoSerializer 初始化失败");
+        }
+        return kryoSerializer.serialize(responseVO);
+    }
     @SocketMapping("/login")
-    public ResponseVO testLogin(@SocketRequestData ResponseVO responseVO, 
-                                @SocketContextSocket Socket socket, 
-                                @SocketRequestData("header.date") Date date) {
-        String ipAndPort = socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
-        if (socketAuthenticationSuccessfulStorage.storeAuthenticatedSocketMetBean(ipAndPort, 
-                new SocketMetBean(socket, responseVO))) {
+    public ResponseVO test(@SocketRequestData ResponseVO responseVO, SocketRequest request, SocketResponse response) {
+        if (socketAuthenticationSuccessfulStorage.storeAuthenticatedClientConnectionInfo("test", new ClientConnectionInfo(request.getClientSocket(), null))) {
             responseVO.getResult().setMessageCh("认证成功");
         } else {
             responseVO.getResult().setCode(-200);
             responseVO.getResult().setMessageCh("认证失败");
         }
         responseVO.getHeader().setDate(new Date());
+
+        // 新建线程等待主线程写入操作完成后再执行 sendMessageAndAwaitResponse
+        new Thread(() -> {
+            try {
+                // 等待直到响应完成写入
+                synchronized (response) {
+                    while (!response.isHasWritten()) {
+                        log.info("等待写入完成...");
+                        response.wait(1000); // 每秒检查一次状态
+                    }
+                    log.info("写入完成，写入次数：{}", response.getWriteCount());
+                }
+
+                // 写入完成后执行二次消息发送
+                sendMessageAndAwaitResponse();
+            } catch (InterruptedException e) {
+                log.error("线程等待写入时出错: {}", e.getMessage());
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+
         return responseVO;
+    }
+
+    public void sendMessageAndAwaitResponse() {
+        try {
+            ClientConnectionInfo clientConnectionInfo = socketAuthenticationSuccessfulStorage.getAuthenticatedClientConnectionInfo("test");
+            Socket socket = clientConnectionInfo.getSocket();
+            if (socket != null && !socket.isClosed()) {
+                OutputStream outputStream = socket.getOutputStream();
+                readWriteMode.write(outputStream, demo, 4);
+                outputStream.flush();
+                log.info("二次发出消息");
+                clientAsServerResponseHandler.sendMessageAndAwaitResponse(message -> {
+                    log.info("进行消费，消费消息为：{}", message);
+                });
+            } else {
+                log.warn("Socket已关闭，无法发送消息");
+            }
+        } catch (Exception e) {
+            log.error("二次消息发送失败: {}", e.getMessage());
+        }
     }
 }
 </code>
@@ -305,53 +369,59 @@ public class SocketControllerTest {
 <code>
 public class SocketClient {
 
-    private static final String SERVER_HOST = "localhost";  // 服务器地址
+    private static final String SERVER_HOST = "127.0.0.1";  // 服务器地址
     private static final int SERVER_PORT = 8888;  // 服务器端口
     private static final Logger log = LoggerFactory.getLogger(SocketClient.class);
     private static final int TIMEOUT = 5000;  // 超时时间
-    public static ResponseVO getDemo(){
+    private static final AtomicInteger messageCounter = new AtomicInteger(0); // 追踪消息次数
+
+    public static ResponseVO getDemo() {
         ResponseVO responseVO = new ResponseVO();
         responseVO.setBody("123");
-        responseVO.setHeader(new HeaderVO().setDate(new Date()).setCommandId("/login").setEqpId("123456"));
+        responseVO.setHeader(new HeaderVO().setDate(new Date()).setCommandId("/login").setEqpId("123456").setClientAsServer(false));
         responseVO.setResult(new ResultVO().setCode(200).setMessageCh("成功"));
         return responseVO;
     }
+
     public static void main(String[] args) {
+        ExecutorService executorService = Executors.newCachedThreadPool();
 
-        new Thread(new SendTheTask("json")).start();
-        new Thread(new SendTheTask("kryo")).start();
+        // 新建资源类
+        SendTheTask sendTheTaskJson = new SendTheTask("kryo");
 
+        // 线程池执行资源类任务
+        executorService.execute(sendTheTaskJson::run);
+        executorService.shutdown();
     }
 
-    private static class SendTheTask implements Runnable{
+    private static class SendTheTask {
         private final String serializationManner;
 
         private SendTheTask(String serializationManner) {
             this.serializationManner = serializationManner;
         }
 
-        @Override
         public void run() {
             try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT)) {
-                socket.setSoTimeout(TIMEOUT); // 设置超时时间
-
                 // 获取输出流（复用，不需要每次发送都重新获取）
                 OutputStream outputStream = socket.getOutputStream();
 
-
+                // 序列化并构建消息
                 byte[] serializedMessage = getSerializedMessage(serializationManner);
                 byte[] fullMessage = buildMessageWithLengthHeader(serializedMessage);
-                log.info("Serialized message: " + Arrays.toString(serializedMessage));
+                log.info("Serialized message: {}", Arrays.toString(serializedMessage));
 
                 // 启动接收消息的线程
-                Thread receiveThread = new Thread(() -> receiveMessages(socket,serializationManner),serializationManner);
+                Thread receiveThread = new Thread(() ->{
+                        receiveMessages(socket, serializationManner);
+                },serializationManner);
                 receiveThread.start();
 
-                // 每隔2秒发送一次消息
+                // 循环发送消息
                 while (!Thread.currentThread().isInterrupted()) {
                     sendMessage(outputStream, fullMessage);
-                    log.info("Sent binary message: " + fullMessage.length + " bytes");
-                    Thread.sleep(2000); // 每隔2秒发送一次
+                    log.info("Sent binary message: {} bytes", fullMessage.length);
+                    TimeUnit.SECONDS.sleep(2);// 每隔2秒发送一次
                 }
             } catch (IOException | InterruptedException e) {
                 log.error("Client error: ", e);
@@ -359,26 +429,29 @@ public class SocketClient {
         }
     }
 
-
-    private static byte[] getSerializedMessage(String serializationManner){
+    private static byte[] getSerializedMessage(String serializationManner) {
         // 初始化要发送的消息
-        ResponseVO demo =getDemo();
+        ResponseVO demo = getDemo();
+        return getBytes(serializationManner, demo);
+    }
+    
+    private static byte[] getSerializedMessage(ResponseVO responseVO, String serializationManner) {
+        return getBytes(serializationManner, responseVO);
+    }
+    
+    private static byte[] getBytes(String serializationManner, ResponseVO demo) {
         byte[] serializedMessage;
         if (Objects.equals(serializationManner, "kryo")) {
             serializedMessage = KryoSerializer.getKryoSerializer().serialize(demo);
-        }else if (Objects.equals(serializationManner, "json")){
+        } else if (Objects.equals(serializationManner, "json")) {
             serializedMessage = JsonUtil.boToJson(demo).getBytes(StandardCharsets.UTF_8);
-
-        }else {
+        } else {
             throw new IllegalArgumentException("Invalid serialization manner: " + serializationManner);
         }
         return serializedMessage;
-
     }
 
-    /**
-     * 构建带有长度字段的消息，长度字段位于消息的前4个字节
-     */
+    
     private static byte[] buildMessageWithLengthHeader(byte[] message) {
         ByteBuffer buffer = ByteBuffer.allocate(4 + message.length);
         buffer.putInt(message.length);  // 消息长度
@@ -386,9 +459,6 @@ public class SocketClient {
         return buffer.array();
     }
 
-    /**
-     * 发送消息到服务器
-     */
     private static void sendMessage(OutputStream outputStream, byte[] message) throws IOException {
         outputStream.write(message);
         outputStream.flush();
@@ -398,55 +468,75 @@ public class SocketClient {
      * 接收并处理来自服务器的消息
      */
     private static void receiveMessages(Socket socket, String serializationManner) {
-        try (InputStream inputStream = socket.getInputStream()) {
+        try (InputStream inputStream = socket.getInputStream();
+             OutputStream outputStream = socket.getOutputStream()) {
+
+
             while (!Thread.currentThread().isInterrupted()) {
-                // 先读取消息的长度
-                byte[] lengthBuffer = new byte[4];
-                int bytesRead = inputStream.read(lengthBuffer);
-                if (bytesRead == -1) {
-                    log.warn("Server closed the connection");
-                    break;
-                }
-                if (bytesRead < 4) {
-                    log.warn("Incomplete message length header received");
-                    continue;
-                }
+                // 检查是否有消息长度可读取
+                int available = inputStream.available();
+                if (available >= 4) {
+                    log.info("消息长度:{}",available);
+                    byte[] lengthBuffer = new byte[4];
+                    int bytesRead = inputStream.read(lengthBuffer);
 
-                // 解析消息长度
-                int messageLength = ByteBuffer.wrap(lengthBuffer).getInt();
-
-                // 根据长度读取完整的消息体
-                byte[] messageBuffer = new byte[messageLength];
-                int totalBytesRead = 0;
-                while (totalBytesRead < messageLength) {
-                    int read = inputStream.read(messageBuffer, totalBytesRead, messageLength - totalBytesRead);
-                    if (read == -1) {
-                        log.warn("Server closed the connection while reading message");
+                    if (bytesRead == -1) {
+                        log.warn("服务器关闭了连接");
                         break;
                     }
-                    totalBytesRead += read;
-                }
 
-                if (totalBytesRead == messageLength) {
-                    ResponseVO response;
-                    if (Objects.equals(serializationManner, "kryo")){
-                        response  = KryoSerializer.getKryoSerializer().deserialize(messageBuffer, ResponseVO.class);
+                    // 解析消息长度
+                    int messageLength = ByteBuffer.wrap(lengthBuffer).getInt();
 
-                    }else if (Objects.equals(serializationManner, "json")){
-                        String messageStr = new String(messageBuffer, StandardCharsets.UTF_8);
-                        response = JsonUtil.jsonToBo(ResponseVO.class,messageStr);
-                    }else {
-                        throw new RuntimeException("不支持的序列化方式");
+                    // 根据长度读取完整的消息体
+                    byte[] messageBuffer = new byte[messageLength];
+                    int totalBytesRead = 0;
+                    while (totalBytesRead < messageLength) {
+                        int read = inputStream.read(messageBuffer, totalBytesRead, messageLength - totalBytesRead);
+                        if (read == -1) {
+                            log.warn("服务器在读取消息时关闭了连接");
+                            break;
+                        }
+                        totalBytesRead += read;
                     }
-                    // 反序列化接收到的消息
-                    log.info("Received and deserialized message: " + response);
-                } else {
-                    log.warn("Received incomplete message");
+
+                    // 反序列化消息
+                    ResponseVO response = deserializeMessage(serializationManner, messageBuffer);
+                    log.info("次数为: {}", messageCounter.get());
+
+                    // 如果是客户端作为服务端响应的场景
+                    if ("/login".equals(response.getHeader().getCommandId()) && messageCounter.get() == 1) {
+                        log.info("客户端作为服务端响应消息");
+                        response.getHeader().setClientAsServer(true);  // 设置客户端响应
+
+                        // 发送响应消息
+                        byte[] serializedMessage = getSerializedMessage(response, serializationManner);
+                        byte[] fullMessage = buildMessageWithLengthHeader(serializedMessage);
+                        sendMessage(outputStream, fullMessage);
+                        log.info("客户端发送了响应消息: {}", Arrays.toString(serializedMessage));
+                    }
+                    messageCounter.incrementAndGet();  // 增加计数器，准备接收下一条消息
+                    log.info("次数为: {}", messageCounter.get());
+                    log.info("接收和反序列化的消息: {}", response);
                 }
             }
         } catch (IOException e) {
             log.error("Error receiving message: ", e);
         }
+    }
+
+
+    private static ResponseVO deserializeMessage(String serializationManner, byte[] messageBuffer) {
+        ResponseVO response;
+        if (Objects.equals(serializationManner, "kryo")) {
+            response = KryoSerializer.getKryoSerializer().deserialize(messageBuffer, ResponseVO.class);
+        } else if (Objects.equals(serializationManner, "json")) {
+            String messageStr = new String(messageBuffer, StandardCharsets.UTF_8);
+            response = JsonUtil.jsonToBo(ResponseVO.class, messageStr);
+        } else {
+            throw new RuntimeException("不支持的序列化方式");
+        }
+        return response;
     }
 }
 </code>
