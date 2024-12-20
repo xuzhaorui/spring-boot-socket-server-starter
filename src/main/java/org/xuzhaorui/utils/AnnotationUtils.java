@@ -1,7 +1,6 @@
 package org.xuzhaorui.utils;
 
 
-import org.xuzhaorui.annotation.SocketUrl;
 import org.xuzhaorui.exception.pre.ParsingException;
 
 
@@ -43,42 +42,42 @@ public class AnnotationUtils {
 
 
 
-    // 查找字段及其嵌套对象
-    private static String findSocketUrlInFields(Class<?> clazz, Object obj) {
-        Field[] fields = clazz.getDeclaredFields();
-        for (Field field : fields) {
-            // 排除自带的系统字段属性
-            if (isUserDefinedField(field)) {
-                if (field.isAnnotationPresent(SocketUrl.class)) {
-                    // 如果字段上有@SocketUrl注解，获取其值
-                    field.setAccessible(true);
-                    try {
-                        String url = (String) field.get(obj);
-                        System.out.println("Found Socket URL: " + url);
-                        return url;
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    // 递归查找嵌套对象
-                    try {
-                        field.setAccessible(true);
-                        Object nestedObject = field.get(obj);
-                        if (nestedObject != null) {
-                            // 递归调用，检查嵌套对象的字段
-                            String nestedUrl = findSocketUrlInFields(nestedObject.getClass(), nestedObject);
-                            if (nestedUrl != null) {
-                                return nestedUrl; // 如果找到，返回结果
-                            }
-                        }
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-        return null;
-    }
+//    // 查找字段及其嵌套对象
+//    private static String findSocketUrlInFields(Class<?> clazz, Object obj) {
+//        Field[] fields = clazz.getDeclaredFields();
+//        for (Field field : fields) {
+//            // 排除自带的系统字段属性
+//            if (isUserDefinedField(field)) {
+//                if (field.isAnnotationPresent(SocketUrl.class)) {
+//                    // 如果字段上有@SocketUrl注解，获取其值
+//                    field.setAccessible(true);
+//                    try {
+//                        String url = (String) field.get(obj);
+//                        System.out.println("Found Socket URL: " + url);
+//                        return url;
+//                    } catch (IllegalAccessException e) {
+//                        e.printStackTrace();
+//                    }
+//                } else {
+//                    // 递归查找嵌套对象
+//                    try {
+//                        field.setAccessible(true);
+//                        Object nestedObject = field.get(obj);
+//                        if (nestedObject != null) {
+//                            // 递归调用，检查嵌套对象的字段
+//                            String nestedUrl = findSocketUrlInFields(nestedObject.getClass(), nestedObject);
+//                            if (nestedUrl != null) {
+//                                return nestedUrl; // 如果找到，返回结果
+//                            }
+//                        }
+//                    } catch (IllegalAccessException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
+//        return null;
+//    }
 
 
     // 判断类是否为用户自定义类
@@ -94,39 +93,39 @@ public class AnnotationUtils {
 
 
 
-    // 主方法，开始查找
-    public static String findSocketUrl1(Object obj) {
-
-        if (obj == null) {
-            return null;
-        }
-        Class<?> clazz = obj.getClass();
-        return findSocketUrlInFields(clazz, obj);
-    }
-    public static String findSocketUrlInFieldNames(Class<?> clazz){
-        Field[] fields = clazz.getDeclaredFields();
-        for (Field field : fields) {
-            // 排除自带的系统字段属性
-            if (isUserDefinedField(field)) {
-                if (field.isAnnotationPresent(SocketUrl.class)) {
-                    return field.getName();// 如果字段上有@SocketUrl注解，获取其值
-
-                } else {
-                    //判断是否为自定义声名内嵌对象
-                    Class<?> fieldType = field.getType();
-                    if (isUserDefinedClass(fieldType)) {
-                        // 递归查找嵌套对象
-                        String socketUrlInFieldNames = findSocketUrlInFieldNames(fieldType);
-                        if (socketUrlInFieldNames != null) {
-                            return socketUrlInFieldNames; // 如果找到，返回结果
-                        }
-                    }
-
-                }
-            }
-        }
-        return null;
-    }
+//    // 主方法，开始查找
+//    public static String findSocketUrl1(Object obj) {
+//
+//        if (obj == null) {
+//            return null;
+//        }
+//        Class<?> clazz = obj.getClass();
+//        return findSocketUrlInFields(clazz, obj);
+//    }
+//    public static String findSocketUrlInFieldNames(Class<?> clazz){
+//        Field[] fields = clazz.getDeclaredFields();
+//        for (Field field : fields) {
+//            // 排除自带的系统字段属性
+//            if (isUserDefinedField(field)) {
+//                if (field.isAnnotationPresent(SocketUrl.class)) {
+//                    return field.getName();// 如果字段上有@SocketUrl注解，获取其值
+//
+//                } else {
+//                    //判断是否为自定义声名内嵌对象
+//                    Class<?> fieldType = field.getType();
+//                    if (isUserDefinedClass(fieldType)) {
+//                        // 递归查找嵌套对象
+//                        String socketUrlInFieldNames = findSocketUrlInFieldNames(fieldType);
+//                        if (socketUrlInFieldNames != null) {
+//                            return socketUrlInFieldNames; // 如果找到，返回结果
+//                        }
+//                    }
+//
+//                }
+//            }
+//        }
+//        return null;
+//    }
 
 
     public static <R> R findMarkAnnotationValue(Object obj, Class<? extends Annotation> annotationClass,List<String> paths) throws ParsingException {

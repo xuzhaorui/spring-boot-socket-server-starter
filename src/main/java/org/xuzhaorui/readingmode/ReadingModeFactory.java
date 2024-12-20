@@ -10,6 +10,8 @@ public class ReadingModeFactory {
             return new ReadWriteModeLine();
         } else if (mode.equals("length")) {
             return new ReadWriteModeLength();
+        }else if (mode.equals("websocket")) {
+            return new ReadWriteModeWebSocket();
         } else {
             throw new IllegalArgumentException("Unsupported reading mode: " + mode);
         }

@@ -58,7 +58,7 @@ public class ClientAsServerResponseHandler {
                 messageAvailable.await();  // 阻塞等待，直到有新消息被设置
             }
             // 在这里 sharedMessage 已经不为空，可以处理
-            log.info("获取到共享消息：{}", sharedMessage);
+//            log.info("获取到共享消息：{}", sharedMessage);
             consumer.consume(sharedMessage);
             sharedMessage = null;  // 清空消息数据，准备下一次消费
         } catch (InterruptedException e) {

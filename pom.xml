@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.xuzhaorui</groupId>
     <artifactId>spring-boot-socket-server-starter</artifactId>
-    <version>0.0.7</version>
+    <version>0.0.8</version>
     <name>spring-boot-socket-server-starter</name>
     <description>
         spring-boot-starter-socket-server is a JavaSocketServer Framework based on SpringBoot
